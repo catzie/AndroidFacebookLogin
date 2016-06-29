@@ -21,6 +21,7 @@ import com.facebook.login.LoginResult;
 import com.facebook.login.widget.LoginButton;
 import com.facebook.share.widget.MessageDialog;
 
+import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.Arrays;
@@ -44,16 +45,9 @@ public class LoginActivity extends AppCompatActivity {
 
         loginButton = (LoginButton) findViewById(R.id.login_button);
         loginButton.setReadPermissions(Arrays.asList(
-                "public_profile", "email"/*, "user_birthday", "user_friends"*/));
+                "public_profile", "email"));
 
         callbackManager = CallbackManager.Factory.create();
-
-        loginButton.setOnClickListener(new View.OnClickListener(){
-            @Override
-            public void onClick(View v) {
-                Log.d(TAG, "loginButton onclick listener fired!");
-            }
-        });
 
         LoginManager.getInstance().registerCallback(callbackManager,
                 new FacebookCallback<LoginResult>() {
@@ -67,23 +61,41 @@ public class LoginActivity extends AppCompatActivity {
 
                         final AccessToken accessToken = loginResult.getAccessToken();
 
-                        GraphRequestAsyncTask request = GraphRequest.newMeRequest(accessToken, new GraphRequest.GraphJSONObjectCallback() {
-                            @Override
-                            public void onCompleted(JSONObject user, GraphResponse graphResponse) {
-                                Log.d(TAG, user.optString("email"));
-                                Log.d(TAG, user.optString("name"));
-                                Log.d(TAG, user.optString("id"));
-                                Log.d(TAG, user.toString());
-                                Log.d(TAG, graphResponse.toString());
+                        GraphRequest request = GraphRequest.newMeRequest(
+                                loginResult.getAccessToken(),
+                                new GraphRequest.GraphJSONObjectCallback() {
+                                    @Override
+                                    public void onCompleted(
+                                            JSONObject object,
+                                            GraphResponse response) {
+                                        Log.v("LoginActivity Response ", response.toString());
 
+                                        try {
 
-                            }
-                        }).executeAsync();
-
-                        Profile profile = Profile.getCurrentProfile();
-                        String firstName = profile.getName();
-                        Log.d(TAG, "profile pic URL = " + profile.getProfilePictureUri(40,40));
-                        Log.d(TAG, "profile URL = " + profile.getLinkUri());
+                                            if(object.has("id")) {
+                                                Log.d(TAG, "Facebook ID: " + object.getString("id"));
+                                            }
+                                            if(object.has("name")) {
+                                                Log.d(TAG, "Name: " + object.getString("name"));
+                                            }
+                                            if(object.has("picture")) {
+                                                Log.d(TAG, "Profile Picture URL: " + object.getJSONObject("picture").getJSONObject("data").getString("url"));
+                                            }
+                                            if(object.has("email")){
+                                                Log.d(TAG, "Email: " + object.getString("email"));
+                                            }
+                                            if(object.has("gender")) {
+                                                Log.d(TAG, "Gender: " + object.getString("gender"));
+                                            }
+                                        } catch (JSONException e) {
+                                            e.printStackTrace();
+                                        }
+                                    }
+                                });
+                        Bundle parameters = new Bundle();
+                        parameters.putString("fields", "id,name,email,gender, birthday, picture");
+                        request.setParameters(parameters);
+                        request.executeAsync();
                     }
 
                     @Override
